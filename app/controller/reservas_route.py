@@ -6,7 +6,7 @@ import requests
 routes = Blueprint("routes", __name__)
 
 def validar_turma(turma_id):
-    resp = requests.get(f"http://localhost:9090/turmas/{turma_id}")
+    resp = requests.get(f"https://school-system-hfwh.onrender.com/turmas/{turma_id}")
     return resp.status_code == 200
 
 @routes.route("/reservas", methods=["POST"])
@@ -46,6 +46,46 @@ def listar_reservas():
         } for r in reservas
     ])
     
+@routes.route("/reservas/<int:reserva_id>", methods=["PUT"])
+def atualizar_reserva(reserva_id):
+    reserva = Reserva.query.get(reserva_id)
+    if not reserva:
+        return jsonify({"error": "Reserva não encontrada"}), 404
+    
+    dados = request.get_json()
+    
+    if "turma_id" in dados:
+        if not validar_turma(dados["turma_id"]):
+            return jsonify({"erro": "Turma não encontrada"}) 
+        reserva.turma_id = dados["turma_id"]
+        
+    if "sala" in dados:
+        reserva.sala = dados["sala"]
+    if "data" in dados:
+        reserva.data = dados["data"]
+    if "hora_inicio" in dados:
+        reserva.hora_inicio = dados["hora_inicio"]
+    if "hora_fim" in dados:
+        reserva.hora_fim = dados["hora_fim"]
     
     
+    db.session.commit()
     
+    return jsonify({
+        "id": reserva.id,
+        "turma_id": reserva.turma_id,
+        "sala": reserva.sala,
+        "data": reserva.data,
+        "hora_inicio": reserva.hora_inicio,
+        "hora_fim": reserva.hora_fim
+    }), 200
+    
+@routes.route("/reservas/<int:reserva_id>", methods=["DELETE"])
+def deletar_reserva(reserva_id):
+    reserva = Reserva.query.get(reserva_id)
+    if not reserva:
+        return jsonify({"erro": "Reserva não encontrada"})
+    db.session.delete(reserva)
+    db.session.commit()
+    
+    return jsonify({"message": "Reserva deletada com sucesso"}),200
